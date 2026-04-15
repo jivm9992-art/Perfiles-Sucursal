@@ -308,22 +308,31 @@
             }
         });
 
-        // ENVIAR A FIREBASE FIRESTORE
+        // ENVIAR A FIREBASE CON DETALLE DE ERRORES
         btnEnviarDB.addEventListener('click', async () => {
             const nombreAsesor = inputNombre.value.trim();
-            const fechaActual = new Date().toISOString();
+            const fechaActual = new Date().toLocaleString('es-MX');
             
-            // Cambiar estado del botón para que sepan que está cargando
+            // Recopilar en qué se equivocaron
+            let erroresDetectados = [];
+            quizData.forEach(item => {
+                const userChoiceId = state[item.id];
+                if (String(item.id) !== String(userChoiceId)) {
+                    const respuestaErronea = quizData.find(q => String(q.id) === String(userChoiceId))?.role || "Sin asignar";
+                    erroresDetectados.push(`${item.role}: confundido con ${respuestaErronea}`);
+                }
+            });
+
             btnEnviarDB.innerText = "Enviando...";
             btnEnviarDB.disabled = true;
 
             try {
-                // Se agrega el documento a una colección llamada 'resultados_evaluacion'
-                const docRef = await addDoc(collection(db, "resultados_evaluacion"), {
+                await addDoc(collection(db, "resultados_evaluacion"), {
                     nombre: nombreAsesor,
                     puntuacion: `${finalScore}/8`,
                     tiempo: finalTime,
                     fecha: fechaActual,
+                    errores: erroresDetectados.length > 0 ? erroresDetectados.join(" | ") : "Ninguno (100% Correcto)",
                     campaña: "BBVA ATC Sucursal"
                 });
                 
@@ -332,13 +341,12 @@
                 alert("Tus resultados fueron enviados correctamente al formador.");
                 
             } catch (error) {
-                console.error("Error al guardar en Firebase: ", error);
+                console.error("Error: ", error);
                 btnEnviarDB.innerText = "☁️ Reintentar Envío";
                 btnEnviarDB.disabled = false;
-                alert("Hubo un error al enviar los datos. Por favor, asegúrate de tener conexión a internet o avísale a tu formador.");
             }
         });
-
+        
     </script>
 </body>
 </html>
