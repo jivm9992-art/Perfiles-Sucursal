@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reto BBVA: Usuarios de Sucursal</title>
+    <style>
+        :root {
+            --bbva-navy: #004481;
+            --bbva-light-blue: #73C2FB;
+            --bbva-green: #4caf50;
+            --bbva-red: #d32f2f;
+            --bbva-white: #ffffff;
+            --bg-gray: #f4f6f9;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg-gray); display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        .main-container { width: 1100px; max-height: 90vh; background: var(--bbva-white); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        #start-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px; text-align: center; height: 100%; }
+        #start-screen h1 { color: var(--bbva-navy); margin-bottom: 10px; }
+        #start-screen p { color: #666; margin-bottom: 30px; }
+        .input-group { margin-bottom: 20px; width: 100%; max-width: 400px; }
+        .input-group input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        header { background-color: var(--bbva-navy); color: var(--bbva-white); padding: 15px 30px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .header-info { display: flex; gap: 20px; align-items: center; font-weight: bold; }
+        .timer-badge { background-color: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-family: monospace; font-size: 18px; letter-spacing: 1px; }
+        .content-area { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px 30px; overflow: hidden; flex-grow: 1; }
+        .roles-column, .responsibilities-column { overflow-y: auto; padding-right: 15px; max-height: calc(90vh - 150px); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #999; }
+        .roles-column { display: flex; flex-direction: column; gap: 15px; }
+        .drop-zone { border: 2px dashed #ccc; border-radius: 6px; padding: 15px; background-color: #fafafa; transition: all 0.2s; }
+        .drop-zone.hovered { border-color: var(--bbva-light-blue); background-color: #e3f2fd; }
+        .role-label { font-size: 14px; font-weight: bold; color: var(--bbva-navy); margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .dropped-item { font-size: 13px; padding: 10px; background-color: #e8f5e9; border: 1px solid var(--bbva-green); border-radius: 4px; cursor: pointer; text-align: center; }
+        .dropped-item:hover::after { content: " (Clic para quitar)"; font-size: 10px; color: #666; font-style: italic; display: block; }
+        .responsibilities-column { display: flex; flex-direction: column; gap: 10px; background-color: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        .drag-item { background-color: var(--bbva-white); border: 1px solid #b0bec5; border-left: 5px solid var(--bbva-light-blue); border-radius: 4px; padding: 12px; font-size: 13px; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .drag-item:active { cursor: grabbing; }
+        .drag-item.dragging { opacity: 0.5; }
+        .action-area { padding: 15px 30px; background-color: #f4f6f9; border-top: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .btn { padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; transition: opacity 0.2s; display: inline-block; }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; opacity: 0.7; }
+        .btn-primary { background-color: var(--bbva-navy); color: var(--bbva-white); }
+        .btn-success { background-color: var(--bbva-green); color: var(--bbva-white); }
+        .feedback-text { font-weight: bold; font-size: 16px; }
+        .correct-answer-hint { font-size: 12px; color: var(--bbva-red); margin-top: 5px; font-style: italic; display: none; }
+        .buttons-container { display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        
+        <div id="start-screen">
+            <h1>Campus BBVA</h1>
+            <h2>Simulador de Estructura de Sucursal</h2>
+            <p>Deberás arrastrar las responsabilidades al rol correspondiente. El tiempo correrá en cuanto inicies.</p>
+            
+            <div class="input-group">
+                <input type="text" id="asesor-nombre" placeholder="Ingresa tu nombre completo para evaluar">
+            </div>
+            <button class="btn btn-primary" id="btn-iniciar">Iniciar Prueba</button>
+            <div id="start-error" style="color: red; margin-top: 10px; display: none;">Debes ingresar tu nombre para comenzar.</div>
+        </div>
+
+        <div id="quiz-screen" style="display: none; height: 100%; flex-direction: column;">
+            <header>
+                <div>
+                    <div style="font-size: 12px; color: var(--bbva-light-blue);">Asesor en evaluación:</div>
+                    <div id="display-nombre" style="font-size: 16px; font-weight: bold;"></div>
+                </div>
+                <div class="header-info">
+                    <div class="timer-badge" id="timer">00:00</div>
+                    <div>Puntuación: <span id="puntuacion">0/8</span></div>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="roles-column" id="roles-column"></div>
+                <div class="responsibilities-column" id="responsibilities-column">
+                    <div style="text-align: center; font-size: 12px; color: #666; margin-bottom: 10px;">Arrastra estas opciones hacia la izquierda.</div>
+                </div>
+            </div>
+
+            <div class="action-area">
+                <div id="feedback" class="feedback-text"></div>
+                <div class="buttons-container">
+                    <button class="btn btn-primary" id="btn-finalizar">Finalizar Prueba</button>
+                    <button class="btn btn-success" id="btn-enviar-db" style="display: none;">☁️ Enviar Resultados</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // Importar funciones de Firebase directamente desde los CDN de Google
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Configuración extraída de tu imagen
+        const firebaseConfig = {
+            apiKey: "AIzaSyAALeauXYBdVCXcf0jaCMvfjwS_cPxo_ks",
+            authDomain: "perfiles-sucursal.firebaseapp.com",
+            projectId: "perfiles-sucursal",
+            storageBucket: "perfiles-sucursal.firebasestorage.app",
+            messagingSenderId: "394146925553",
+            appId: "1:394146925553:web:c19a59ff3d6eee3c731250",
+            measurementId: "G-MQ0JHBLTCR"
+        };
+
+        // Inicializar Firebase y la Base de Datos (Firestore)
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // -- Lógica del simulador --
+        const quizData = [
+            { id: 1, role: "Director de sucursal", desc: "Personal responsable del funcionamiento de la sucursal bancaria." },
+            { id: 2, role: "Asesor digital", desc: "Personal responsable de la atención y apoyo a clientes en el área de autoservicios y procesos básicos." },
+            { id: 3, role: "Jefe de cajeros", desc: "Personal responsable del buen funcionamiento de ventanillas." },
+            { id: 4, role: "Auxiliar Jefe de cajeros", desc: "Es responsable de apoyar al jefe de cajeros y cubrirlo cuando no se encuentre disponible." },
+            { id: 5, role: "Director centro de negocios", desc: "Personal responsable del funcionamiento eficiente del centro de negocios, incluyendo el manejo del personal y contacto con el cliente." },
+            { id: 6, role: "Ejecutivo AAUR", desc: "Personal responsable de la atención a clientes y atención a TPV." },
+            { id: 7, role: "Banqueros", desc: "Personal responsable de la atención al clientes, colocación de productos y servicios." },
+            { id: 8, role: "DAR Hub", desc: "Tiene a cargo 6 directores de zona y se encargan de su gestión." }
+        ];
+
+        let state = {}; 
+        let timerInterval;
+        let secondsElapsed = 0;
+        let isFinished = false;
+        let finalScore = 0;
+        let finalTime = "";
+
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const inputNombre = document.getElementById('asesor-nombre');
+        const displayNombre = document.getElementById('display-nombre');
+        const btnIniciar = document.getElementById('btn-iniciar');
+        const btnFinalizar = document.getElementById('btn-finalizar');
+        const btnEnviarDB = document.getElementById('btn-enviar-db');
+        const rolesColumn = document.getElementById('roles-column');
+        const responsibilitiesColumn = document.getElementById('responsibilities-column');
+        const feedback = document.getElementById('feedback');
+        const puntuacionDisplay = document.getElementById('puntuacion');
+        const timerDisplay = document.getElementById('timer');
+        const startError = document.getElementById('start-error');
+
+        function startTimer() {
+            secondsElapsed = 0;
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+                const secs = String(secondsElapsed % 60).padStart(2, '0');
+                finalTime = `${mins}:${secs}`;
+                timerDisplay.innerText = finalTime;
+            }, 1000);
+        }
+
+        function stopTimer() { clearInterval(timerInterval); }
+
+        btnIniciar.addEventListener('click', () => {
+            const nombre = inputNombre.value.trim();
+            if (nombre === "") { startError.style.display = 'block'; return; }
+            startError.style.display = 'none';
+            displayNombre.innerText = nombre;
+            startScreen.style.display = 'none';
+            quizScreen.style.display = 'flex';
+            initQuiz();
+            startTimer();
+        });
+
+        function initQuiz() {
+            state = {};
+            rolesColumn.innerHTML = '';
+            responsibilitiesColumn.innerHTML = '<div style="text-align: center; font-size: 12px; color: #666; margin-bottom: 10px;">Arrastra estas opciones hacia la izquierda.</div>';
+            feedback.innerHTML = '';
+            puntuacionDisplay.innerHTML = '0/8';
+            isFinished = false;
+            btnEnviarDB.style.display = 'none'; 
+
+            quizData.forEach(item => {
+                const zone = document.createElement('div');
+                zone.className = 'drop-zone';
+                zone.dataset.roleId = item.id;
+                zone.innerHTML = `
+                    <div class="role-label">${item.role}</div>
+                    <div class="dropped-item-container" id="zone-${item.id}">
+                        <div class="placeholder-text" style="color: #999; font-size: 12px; font-style: italic; text-align: center; padding: 5px;">[Suelta la respuesta aquí]</div>
+                    </div>
+                    <div class="correct-answer-hint" id="hint-${item.id}">Respuesta correcta: ${item.desc}</div>
+                `;
+                rolesColumn.appendChild(zone);
+                zone.addEventListener('dragover', (e) => { if(!isFinished) e.preventDefault(); });
+                zone.addEventListener('dragenter', () => { if(!isFinished) zone.classList.add('hovered'); });
+                zone.addEventListener('dragleave', () => zone.classList.remove('hovered'));
+                zone.addEventListener('drop', handleDrop);
+            });
+
+            const shuffled = [...quizData].sort(() => Math.random() - 0.5);
+            shuffled.forEach(item => {
+                const dragItem = document.createElement('div');
+                dragItem.className = 'drag-item';
+                dragItem.draggable = true;
+                dragItem.id = `desc-${item.id}`;
+                dragItem.dataset.descId = item.id;
+                dragItem.innerText = item.desc;
+                responsibilitiesColumn.appendChild(dragItem);
+
+                dragItem.addEventListener('dragstart', (e) => {
+                    if (isFinished) return e.preventDefault();
+                    e.dataTransfer.setData('text/plain', dragItem.id);
+                    setTimeout(() => dragItem.classList.add('dragging'), 0);
+                });
+                dragItem.addEventListener('dragend', () => dragItem.classList.remove('dragging'));
+            });
+        }
+
+        function handleDrop(e) {
+            if (isFinished) return;
+            e.preventDefault();
+            this.classList.remove('hovered');
+            
+            const roleId = this.dataset.roleId;
+            const descItemId = e.dataTransfer.getData('text/plain');
+            const descItem = document.getElementById(descItemId);
+            
+            if (!descItem) return;
+            const container = document.getElementById(`zone-${roleId}`);
+
+            const existingItem = container.querySelector('.dropped-item');
+            if (existingItem) {
+                const oldDescId = existingItem.dataset.descId;
+                const oldDescItem = document.getElementById(`desc-${oldDescId}`);
+                oldDescItem.style.display = 'block'; 
+            }
+
+            const descId = descItem.dataset.descId;
+            state[roleId] = descId;
+
+            container.innerHTML = ''; 
+            const newDroppedItem = document.createElement('div');
+            newDroppedItem.className = 'dropped-item';
+            newDroppedItem.innerText = descItem.innerText;
+            newDroppedItem.dataset.descId = descId;
+            newDroppedItem.title = "Haz clic para devolver a la lista";
+            
+            newDroppedItem.addEventListener('click', function() {
+                if(isFinished) return;
+                descItem.style.display = 'block'; 
+                container.innerHTML = '<div class="placeholder-text" style="color: #999; font-size: 12px; font-style: italic; text-align: center; padding: 5px;">[Suelta la respuesta aquí]</div>';
+                delete state[roleId];
+            });
+
+            container.appendChild(newDroppedItem);
+            descItem.style.display = 'none';
+        }
+
+        btnFinalizar.addEventListener('click', () => {
+            if (isFinished) return; 
+            
+            finalScore = 0;
+            let answeredCount = Object.keys(state).length;
+
+            if (answeredCount < 8) {
+                alert("Aún tienes perfiles sin asignar. Por favor complétalos antes de finalizar.");
+                return;
+            }
+
+            stopTimer();
+            isFinished = true;
+            btnFinalizar.style.display = 'none'; 
+            btnEnviarDB.style.display = 'inline-block'; 
+
+            const dropZones = document.querySelectorAll('.drop-zone');
+            
+            dropZones.forEach(zone => {
+                const roleId = zone.dataset.roleId;
+                const droppedItem = zone.querySelector('.dropped-item');
+                const descId = droppedItem.dataset.descId;
+                const hint = document.getElementById(`hint-${roleId}`);
+                
+                if (roleId === descId) {
+                    finalScore++;
+                    zone.style.borderColor = 'var(--bbva-green)';
+                    zone.style.backgroundColor = '#e8f5e9';
+                    droppedItem.style.borderColor = 'var(--bbva-green)';
+                } else {
+                    zone.style.borderColor = 'var(--bbva-red)';
+                    zone.style.backgroundColor = '#ffebee';
+                    droppedItem.style.borderColor = 'var(--bbva-red)';
+                    hint.style.display = 'block'; 
+                }
+                droppedItem.style.cursor = 'default'; 
+                droppedItem.title = "";
+            });
+
+            puntuacionDisplay.innerHTML = `${finalScore}/8`;
+
+            if (finalScore === 8) {
+                feedback.innerHTML = `<span style="color: var(--bbva-green)">¡Aprobado! Excelente trabajo.</span>`;
+            } else {
+                feedback.innerHTML = `<span style="color: var(--bbva-red)">Evaluación terminada. Revisa tus errores marcados en rojo.</span>`;
+            }
+        });
+
+        // ENVIAR A FIREBASE FIRESTORE
+        btnEnviarDB.addEventListener('click', async () => {
+            const nombreAsesor = inputNombre.value.trim();
+            const fechaActual = new Date().toISOString();
+            
+            // Cambiar estado del botón para que sepan que está cargando
+            btnEnviarDB.innerText = "Enviando...";
+            btnEnviarDB.disabled = true;
+
+            try {
+                // Se agrega el documento a una colección llamada 'resultados_evaluacion'
+                const docRef = await addDoc(collection(db, "resultados_evaluacion"), {
+                    nombre: nombreAsesor,
+                    puntuacion: `${finalScore}/8`,
+                    tiempo: finalTime,
+                    fecha: fechaActual,
+                    campaña: "BBVA ATC Sucursal"
+                });
+                
+                btnEnviarDB.innerText = "¡Resultados Enviados!";
+                btnEnviarDB.style.backgroundColor = "var(--bbva-green)";
+                alert("Tus resultados fueron enviados correctamente al formador.");
+                
+            } catch (error) {
+                console.error("Error al guardar en Firebase: ", error);
+                btnEnviarDB.innerText = "☁️ Reintentar Envío";
+                btnEnviarDB.disabled = false;
+                alert("Hubo un error al enviar los datos. Por favor, asegúrate de tener conexión a internet o avísale a tu formador.");
+            }
+        });
+
+    </script>
+</body>
+</html>
