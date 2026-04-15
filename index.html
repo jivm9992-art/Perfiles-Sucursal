@@ -98,11 +98,9 @@
     </div>
 
     <script type="module">
-        // Importar funciones de Firebase directamente desde los CDN de Google
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Configuración extraída de tu imagen
         const firebaseConfig = {
             apiKey: "AIzaSyAALeauXYBdVCXcf0jaCMvfjwS_cPxo_ks",
             authDomain: "perfiles-sucursal.firebaseapp.com",
@@ -113,11 +111,9 @@
             measurementId: "G-MQ0JHBLTCR"
         };
 
-        // Inicializar Firebase y la Base de Datos (Firestore)
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // -- Lógica del simulador --
         const quizData = [
             { id: 1, role: "Director de sucursal", desc: "Personal responsable del funcionamiento de la sucursal bancaria." },
             { id: 2, role: "Asesor digital", desc: "Personal responsable de la atención y apoyo a clientes en el área de autoservicios y procesos básicos." },
@@ -308,18 +304,22 @@
             }
         });
 
-        // ENVIAR A FIREBASE CON DETALLE DE ERRORES
+        // ENVIAR A FIREBASE FIRESTORE CON CAPTURA EXACTA DE ERRORES
         btnEnviarDB.addEventListener('click', async () => {
             const nombreAsesor = inputNombre.value.trim();
             const fechaActual = new Date().toLocaleString('es-MX');
             
-            // Recopilar en qué se equivocaron
+            // Aquí se genera el texto exacto de en qué se equivocaron
             let erroresDetectados = [];
             quizData.forEach(item => {
                 const userChoiceId = state[item.id];
                 if (String(item.id) !== String(userChoiceId)) {
-                    const respuestaErronea = quizData.find(q => String(q.id) === String(userChoiceId))?.role || "Sin asignar";
-                    erroresDetectados.push(`${item.role}: confundido con ${respuestaErronea}`);
+                    // Buscar qué rol corresponde a la descripción que arrastraron por error
+                    const respuestaErronea = quizData.find(q => String(q.id) === String(userChoiceId));
+                    const nombreError = respuestaErronea ? respuestaErronea.role : "Desconocido";
+                    
+                    // Crea el mensaje exacto para el Excel
+                    erroresDetectados.push(`❌ En [${item.role}] arrastró la actividad de [${nombreError}]`);
                 }
             });
 
@@ -341,12 +341,13 @@
                 alert("Tus resultados fueron enviados correctamente al formador.");
                 
             } catch (error) {
-                console.error("Error: ", error);
+                console.error("Error al guardar en Firebase: ", error);
                 btnEnviarDB.innerText = "☁️ Reintentar Envío";
                 btnEnviarDB.disabled = false;
+                alert("Hubo un error al enviar los datos.");
             }
         });
-        
+
     </script>
 </body>
 </html>
